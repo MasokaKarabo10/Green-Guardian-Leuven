@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hack the Waste — Real Map Build</title>
+
+  <style>
+    :root {
+      --phone-bg: #f8fbf8;
+      --card: #ffffff;
+      --text: #102118;
+      --muted: #66766c;
+      --green: #246b48;
+      --green-2: #2f8b5b;
+      --green-soft: #e4f3ea;
+      --red: #dc123b;
+      --red-soft: #ffe2e8;
+      --yellow: #f5a623;
+      --yellow-soft: #fff3d7;
+      --line: #e1e8e3;
+      --shadow: 0 18px 50px rgba(13, 43, 27, 0.12);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(47, 139, 91, 0.18), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(220, 18, 59, 0.08), transparent 30%),
+        #15201a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .stage {
+      display: flex;
+      align-items: start;
+      justify-content: center;
+    }
+
+    .phone {
+      width: 393px;
+      height: 852px;
+      background: var(--phone-bg);
+      border-radius: 36px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 8px solid #0d1712;
+      position: relative;
+    }
+
+    .screen {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+      background: var(--phone-bg);
+    }
+
+    .screen.active { display: block; }
+    .screen::-webkit-scrollbar { width: 0; }
+    .content { padding: 24px; }
+
+    .topbar {
+      min-height: 72px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.78);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+    }
+
+    .icon-btn {
+      border: none;
+      background: var(--green-soft);
+      color: var(--green);
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      font-size: 18px;
+      cursor: pointer;
+      flex: none;
+    }
+
+    .back {
+      border: none;
+      background: transparent;
+      font-size: 28px;
+      cursor: pointer;
+      color: var(--text);
+      width: 32px;
+    }
+
+    h1 {
+      font-size: 30px;
+      line-height: 1.1;
+      margin: 0;
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      font-size: 22px;
+      margin: 0;
+      letter-spacing: -0.025em;
+    }
+
+    h3 {
+      font-size: 17px;
+      margin: 0;
+      letter-spacing: -0.015em;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .small { font-size: 12px; }
+
+    .section-title {
+      margin: 22px 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      padding: 15px 18px;
+      font-weight: 800;
+      cursor: pointer;
+      color: white;
+      background: var(--green);
+      box-shadow: 0 10px 24px rgba(36, 107, 72, 0.22);
+      transition: transform .12s ease, opacity .12s ease;
+    }
+
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: .62; cursor: not-allowed; }
+
+    .btn.secondary {
+      background: white;
+      color: var(--green);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .btn.danger { background: var(--red); }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 32px rgba(16, 33, 24, 0.06);
+      padding: 18px;
+    }
+
+    .soft-card {
+      background: var(--green-soft);
+      border-radius: var(--radius);
+      padding: 18px;
+      border: 1px solid rgba(36, 107, 72, 0.12);
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 14px 12px;
+      min-height: 92px;
+    }
+
+    .stat .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 22px;
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .chip.active {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+    }
+
+    .map-card {
+      height: 410px;
+      width: 100%;
+      border-radius: 26px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      position: relative;
+      background: #d8e7de;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      height: 410px;
+      width: 100%;
+      z-index: 1;
+      background: #d8e7de;
+    }
+
+
+    .real-heat-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 650;
+      pointer-events: none;
+      border-radius: 26px;
+      overflow: hidden;
+    }
+
+    .real-heat-layer .heat-blob {
+      pointer-events: auto;
+    }
+
+    .fallback-map {
+      position: absolute;
+      inset: 0;
+      display: none;
+      z-index: 2;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.45) 9px, transparent 9px),
+        linear-gradient(rgba(255,255,255,.45) 9px, transparent 9px),
+        linear-gradient(135deg, #d8e7de 0%, #eff5ec 100%);
+      background-size: 74px 74px, 74px 74px, 100% 100%;
+    }
+
+    .fallback-map.active { display: block; }
+
+    .legend {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 11px;
+      display: grid;
+      gap: 5px;
+      z-index: 700;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    .legend div {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend span {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: block;
+    }
+
+    .fallback-heat-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .heat-blob {
+      position: absolute;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+      border: 2px solid rgba(255,255,255,0.82);
+      backdrop-filter: blur(1px);
+      animation: pulse 2.8s ease-in-out infinite;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .heat-blob.high {
+      background: rgba(220, 18, 59, 0.52);
+      color: #8a001d;
+      box-shadow: 0 0 46px rgba(220, 18, 59, 0.48);
+    }
+
+    .heat-blob.medium {
+      background: rgba(245, 166, 35, 0.50);
+      color: #7c4a00;
+      box-shadow: 0 0 42px rgba(245, 166, 35, 0.42);
+    }
+
+    .heat-blob.cleaned {
+      background: rgba(47, 139, 91, 0.48);
+      color: #0f5634;
+      box-shadow: 0 0 42px rgba(47, 139, 91, 0.38);
+    }
+
+    @keyframes pulse {
+      0%, 100% { scale: 1; }
+      50% { scale: 1.055; }
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 900;
+      margin-top: 10px;
+    }
+
+    .admin-select {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font: inherit;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .login-hint {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 16px;
+      background: var(--green-soft);
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input, textarea {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+      outline: none;
+      width: 100%;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: none;
+    }
+
+    .upload {
+      height: 170px;
+      border: 2px dashed #c9d8ce;
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      background: white;
+      text-align: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .upload.has-image {
+      border-style: solid;
+      padding: 0;
+    }
+
+    .uploaded-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .location-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .tiny-btn {
+      border: none;
+      border-radius: 14px;
+      background: var(--green-soft);
+      color: var(--green);
+      padding: 12px 14px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .status-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .image-preview {
+      height: 210px;
+      border-radius: 24px;
+      background: linear-gradient(135deg,#d9eee1,#ffffff);
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(0,255,150,0.8);
+      top: 40%;
+      box-shadow: 0 0 18px rgba(0,255,150,0.7);
+      animation: scan 2.2s infinite;
+    }
+
+    @keyframes scan {
+      0% { top: 10%; }
+      50% { top: 80%; }
+      100% { top: 10%; }
+    }
+
+    .score-row {
+      display: grid;
+      grid-template-columns: 1fr 95px;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .score {
+      font-size: 40px;
+      font-weight: 900;
+      color: var(--red);
+      letter-spacing: -0.05em;
+    }
+
+    .ring {
+      width: 80px;
+      height: 80px;
+      border-radius: 999px;
+      background: conic-gradient(var(--red) 0 32%, #edf1ee 32% 100%);
+      display: grid;
+      place-items: center;
+    }
+
+    .ring::after {
+      content: attr(data-score);
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      background: white;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .activity {
+      display: grid;
+      gap: 12px;
+    }
+
+    .activity-item {
+      display: grid;
+      grid-template-columns: 50px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+    }
+
+    .activity-item.clickable { cursor: pointer; }
+
+    .square {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+
+    .timeline { display: grid; gap: 0; }
+
+    .step {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      min-height: 72px;
+      position: relative;
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      left: 16px;
+      top: 30px;
+      bottom: 0;
+      width: 2px;
+      background: #b8d5c2;
+    }
+
+    .step:last-child::before { display: none; }
+
+    .step-dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: var(--green-2);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+
+    .before-after {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .photo {
+      height: 100px;
+      border-radius: 18px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      overflow: hidden;
+      background-color: #dde7e0;
+    }
+
+    .photo::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      font-size: 30px;
+      color: #f59f1a;
+      padding: 16px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.48);
+      z-index: 9999;
+      padding: 24px;
+    }
+
+    .modal-backdrop.active { display: flex; }
+
+    .modal {
+      width: min(360px, 100%);
+      background: white;
+      border-radius: 26px;
+      padding: 22px;
+      box-shadow: 0 28px 80px rgba(0,0,0,0.28);
+    }
+
+    .modal-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: var(--yellow-soft);
+      color: #9b6200;
+      font-size: 28px;
+      margin-bottom: 14px;
+    }
+
+    .loading-dots::after {
+      content: "";
+      animation: dots 1.2s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0% { content: ""; }
+      25% { content: "."; }
+      50% { content: ".."; }
+      75% { content: "..."; }
+      100% { content: ""; }
+    }
+
+    .sidebar {
+      color: #dce7df;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      padding: 20px;
+      width: 360px;
+      position: sticky;
+      top: 24px;
+    }
+
+    .sidebar h3 {
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .flow-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .flow-list button {
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+      color: #dce7df;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .flow-list button:hover { background: rgba(255,255,255,0.1); }
+
+    .pitch {
+      font-size: 13px;
+      color: #b9c8bf;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    .db-note {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #b9c8bf;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    /* Inline Leaflet essentials. This avoids the broken/infinite map problem if external Leaflet CSS is blocked. */
+    .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+    .leaflet-container{overflow:hidden;height:100%;width:100%;font-family:inherit;touch-action:pan-x pan-y}
+    .leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{user-select:none;-webkit-user-drag:none}
+    .leaflet-tile{filter:sepia(.08) saturate(.9)}
+    .leaflet-tile-container{width:256px;height:256px}
+    .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
+    .leaflet-control{position:relative;z-index:800;pointer-events:auto}
+    .leaflet-top,.leaflet-bottom{position:absolute;z-index:800;pointer-events:none}
+    .leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+    .leaflet-control-zoom{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:white;margin:12px}
+    .leaflet-control-zoom a{display:block;width:32px;height:32px;line-height:32px;text-align:center;text-decoration:none;color:var(--text);font-weight:900;background:white}
+    .leaflet-control-attribution{display:none}
+
+    @media (max-width: 900px) {
+      body { padding: 0; align-items: start; }
+      .stage { display: block; }
+      .phone { width: 100vw; height: 100vh; border-radius: 0; border: none; }
+      .sidebar { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="stage">
+    <section class="phone">
+
+
+      <section class="screen active" id="login">
+        <div class="content" style="height:100%; display:flex; flex-direction:column; justify-content:center;">
+          <div style="text-align:center; margin-bottom:42px;">
+            <div style="width:102px;height:102px;border-radius:30px;background:white;margin:0 auto 28px;display:grid;place-items:center;box-shadow:0 22px 48px rgba(36,107,72,.16);font-size:48px;">♻️</div>
+            <h1>Hack the Waste</h1>
+            <p style="margin-top:10px;">Login to continue</p>
+          </div>
+
+          <div class="card">
+            <div class="field" style="margin-top:0;">
+              <label>Username</label>
+              <input id="loginUsername" placeholder="Username" autocomplete="username" />
+            </div>
+
+            <div class="field">
+              <label>Password</label>
+              <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key === 'Enter') login()" />
+            </div>
+
+            <p id="loginError" class="status-note" style="color:var(--red);display:none;">Invalid username or password.</p>
+            <button class="btn" style="margin-top:18px;" onclick="login()">Login</button>
+</div>
+        </div>
+      </section>
+
+      <section class="screen" id="splash">
+        <div class="content" style="height:100%; display:flex; flex-direction:column; justify-content:center;">
+          <div style="text-align:center; margin-bottom:90px;">
+            <div style="width:116px;height:116px;border-radius:32px;background:white;margin:0 auto 34px;display:grid;place-items:center;box-shadow:0 22px 48px rgba(36,107,72,.16);font-size:52px;">♻️</div>
+            <h1>Hack the Waste</h1>
+            <p style="margin-top:10px;">Live litter intelligence for Leuven</p>
+            <div class="role-badge" id="splashRoleBadge">Role</div>
+          </div>
+          <div style="display:grid; gap:14px;" id="splashActions">
+            <button class="btn" onclick="go('heatmap')">🗺️ Open Real Map</button>
+            <button class="btn secondary" onclick="go('report')">📸 Report Litter</button>
+          </div>
+          <p class="small" style="text-align:center; margin-top:32px;">Location + image + AI score → live heatmap</p>
+        </div>
+      </section>
+
+      <section class="screen" id="heatmap">
+        <div class="topbar">
+          <div>
+            <h2>Live Risk Map</h2>
+            <p class="small">OpenStreetMap + report zones</p>
+          </div>
+          <button class="icon-btn" onclick="logout()">⇥</button>
+        </div>
+
+        <div class="content">
+          <div class="grid-3">
+            <div class="stat"><span class="small"><span class="dot" style="background:var(--red);"></span>High Risk</span><strong id="highStat">0</strong><p class="small">reports</p></div>
+            <div class="stat"><span class="small"><span class="dot" style="background:var(--yellow);"></span>Medium</span><strong id="mediumStat">0</strong><p class="small">reports</p></div>
+            <div class="stat"><span class="small"><span class="dot" style="background:var(--green-2);"></span>Cleaned</span><strong id="cleanStat">0</strong><p class="small">reports</p></div>
+          </div>
+
+          <div class="section-title"><h3>Report Filters</h3></div>
+          <div class="chip-row">
+            <button class="chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
+            <button class="chip" data-filter="high" onclick="setFilter('high', this)">High Risk</button>
+            <button class="chip" data-filter="medium" onclick="setFilter('medium', this)">Medium</button>
+            <button class="chip" data-filter="cleaned" onclick="setFilter('cleaned', this)">Cleaned</button>
+          </div>
+
+          <div class="section-title">
+            <h3>Leuven Real Map</h3>
+            <button class="chip" onclick="resetDemoData()">Reset Demo</button>
+          </div>
+
+          <div class="map-card">
+            <div id="map"></div>
+            <div class="real-heat-layer" id="realHeatLayer"></div>
+            <div class="fallback-map" id="fallbackMap">
+              <div class="fallback-heat-layer" id="fallbackHeatLayer"></div>
+            </div>
+            <div class="legend">
+              <div><span style="background:var(--red);"></span>High risk / unresolved</div>
+              <div><span style="background:var(--yellow);"></span>Medium / unresolved</div>
+              <div><span style="background:var(--green-2);"></span>Cleaned</div>
+            </div>
+          </div>
+
+          <p class="status-note">The map shows the latest condition of each area. Cleaned zones turn green; newly reported litter becomes red or yellow.</p>
+
+          <div class="section-title"><h3>Actions</h3></div>
+          <div id="mapActions"></div>
+        </div>
+      </section>
+
+      <section class="screen" id="reports">
+        <div class="topbar">
+          <button class="back" onclick="go('heatmap')">‹</button>
+          <div>
+            <h2>Active Reports</h2>
+            <p class="small">Unsolved reports from localStorage</p>
+          </div>
+          <button class="icon-btn" onclick="renderReportsPage()">↻</button>
+        </div>
+        <div class="content">
+          <div class="section-title">
+            <h3>Unsolved Reports</h3>
+            <p class="small" id="activeReportCount">0 active</p>
+          </div>
+          <div class="activity" id="activeReportsList"></div>
+
+          <div class="section-title">
+            <h3>Cleaned Reports</h3>
+            <p class="small">History</p>
+          </div>
+          <div class="activity" id="cleanedReportsList"></div>
+        </div>
+      </section>
+
+
+      <section class="screen" id="admin">
+        <div class="topbar">
+          <button class="back" onclick="go('heatmap')">‹</button>
+          <div>
+            <h2>Admin Dashboard</h2>
+            <p class="small">Assign reports to cleaning teams</p>
+          </div>
+          <button class="icon-btn" onclick="logout()">⇥</button>
+        </div>
+
+        <div class="content">
+          <div class="soft-card">
+            <h3>Admin Controls</h3>
+            <p class="small" style="margin-top:6px;">Review active litter reports, assign them to teams, and mark zones as cleaned when work is completed.</p>
+          </div>
+
+          <div class="section-title">
+            <h3>Team Assignment</h3>
+            <p class="small" id="adminReportCount">0 active</p>
+          </div>
+
+          <div class="activity" id="adminReportsList"></div>
+        </div>
+      </section>
+
+      <section class="screen" id="report">
+        <div class="topbar">
+          <button class="back" onclick="go('heatmap')">‹</button>
+          <h2>Report Litter</h2>
+          <span></span>
+        </div>
+        <div class="content">
+          <div class="field">
+            <label>Evidence Image</label>
+            <input id="imageInput" type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)" />
+            <div class="upload" id="uploadBox" onclick="document.getElementById('imageInput').click()">
+              <img id="uploadedPreview" class="uploaded-preview" alt="Uploaded litter evidence" />
+              <div id="uploadPlaceholder">
+                <div style="font-size:42px;margin-bottom:10px;">📷</div>
+                <strong>Tap to upload photo</strong>
+                <p class="small">JPG, PNG up to 10MB</p>
+              </div>
+            </div>
+            <p id="imageStatus" class="status-note">No image selected yet.</p>
+          </div>
+
+          <div class="field">
+            <label>Incident Location</label>
+            <div class="location-row">
+              <input id="locationText" value="Location not selected yet" readonly />
+              <button class="tiny-btn" onclick="getUserLocation()">Use GPS</button>
+            </div>
+            <p id="locationStatus" class="status-note">Press “Use GPS” to attach your current latitude and longitude.</p>
+          </div>
+
+          <div class="field">
+            <label>Description</label>
+            <textarea id="reportDescription">Glass bottles and food waste near the square after a crowded evening.</textarea>
+          </div>
+
+          <div class="soft-card" style="margin-top:16px;">
+            <h3>Duplicate Check + AI Scan</h3>
+            <p class="small" style="margin-top:6px;">The app checks for nearby unresolved reports, analyzes the image, calculates a cleanliness score, and adds the result to the live risk map.</p>
+          </div>
+
+          <button id="scanButton" class="btn" style="margin-top:22px;" onclick="scanAndAddToHeatmap()">Scan & Add to Heatmap</button>
+        </div>
+      </section>
+
+      <section class="screen" id="scan">
+        <div class="topbar">
+          <button class="back" onclick="go('report')">‹</button>
+          <h2>AI Litter Scan</h2>
+          <button class="icon-btn" onclick="go('heatmap')">⌂</button>
+        </div>
+        <div class="content">
+          <p style="text-align:center;margin-bottom:12px;">Analyzed Image</p>
+          <div class="image-preview" id="aiImagePreview"><div class="scan-line"></div></div>
+
+          <div class="card" style="margin-top:20px;">
+            <div class="score-row">
+              <div><p><strong>Cleanliness Score</strong></p><div><span class="score" id="aiScoreText">--</span> <strong>/ 100</strong></div></div>
+              <div class="ring" id="aiScoreRing" data-score="--"></div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+              <span class="pill">♻ Type: <span id="aiWasteType">--</span></span>
+              <span class="pill">! Urgency: <span id="aiUrgency">--</span></span>
+              <span class="pill">📍 <span id="aiArea">--</span></span>
+            </div>
+          </div>
+
+          <div class="section-title"><h3>Heatmap Impact</h3></div>
+          <div class="card">
+            <div style="display:grid;grid-template-columns:20px 1fr;gap:10px;">
+              <span id="aiRiskDot" style="width:12px;height:12px;background:var(--red);border-radius:999px;margin-top:5px;"></span>
+              <div><h3>Zone Status: <span id="aiZoneStatus">--</span></h3><p class="small" id="aiExplanation">The report was analyzed and added to the map.</p></div>
+            </div>
+          </div>
+
+          <button class="btn" style="margin-top:22px;" onclick="go('heatmap')">Return to Live Map</button>
+          <button class="btn secondary" style="margin-top:12px;" onclick="go('reports')">View in Active Reports</button>
+        </div>
+      </section>
+
+      <section class="screen" id="tracking">
+        <div class="topbar">
+          <button class="back" onclick="go('reports')">‹</button>
+          <h2>Report Details</h2>
+          <span></span>
+        </div>
+        <div class="content" id="trackingContent"></div>
+      </section>
+
+      <section class="screen" id="feedback">
+        <div class="topbar">
+          <button class="back" onclick="go('tracking')">‹</button>
+          <h2>Cleaning Feedback</h2>
+          <span></span>
+        </div>
+        <div class="content">
+          <div style="text-align:center;margin:22px 0;">
+            <div style="width:58px;height:58px;background:#35bd5c;color:white;border-radius:999px;display:grid;place-items:center;margin:0 auto 16px;font-size:26px;">✓</div>
+            <h1 style="color:var(--green-2);">Area Cleaned!</h1>
+            <p style="margin-top:8px;">The selected report has been updated to green on the live map.</p>
+          </div>
+
+          <div class="card">
+            <div class="before-after">
+              <div class="photo" id="feedbackBefore" data-label="Before"></div>
+              <div class="photo" data-label="After" style="background:linear-gradient(135deg,#d9eee1,#ffffff);"></div>
+            </div>
+          </div>
+
+          <div class="section-title"><h3>Was the area cleaned well?</h3></div>
+          <textarea placeholder="Tell us more about the cleaning quality..."></textarea>
+
+          <div class="section-title"><h3>Rate the Cleaning</h3></div>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+
+          <button class="btn" style="margin-top:22px;" onclick="go('heatmap')">Submit Feedback</button>
+        </div>
+      </section>
+    </section>
+</main>
+
+  <div class="modal-backdrop" id="duplicateModal">
+    <div class="modal">
+      <div class="modal-icon">⚠️</div>
+      <h2>The litter has been reported previously</h2>
+      <p style="margin-top:10px;">There is already an unresolved litter report very close to your current location. To avoid duplicate reports, this one will not be added again.</p>
+      <div class="card" style="margin-top:16px;">
+        <p class="small">Existing report</p>
+        <h3 id="duplicateReportTitle">Existing report</h3>
+        <p class="small" id="duplicateReportMeta">Distance: -- m • Status: unsolved</p>
+      </div>
+      <button class="btn" style="margin-top:18px;" onclick="closeDuplicateModal()">Back to Live Map</button>
+      <button class="btn secondary" style="margin-top:10px;" onclick="viewDuplicateReport()">View Existing Report</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const DB_KEY = "htw_reports_db_final_ai_fix_v3";
+    const DUPLICATE_THRESHOLD_METERS = 45;
+
+    // Gemini AI config
+    // For local hackathon demo only. Do not deploy a public frontend with a hardcoded API key.
+    // Paste your real Google AI Studio key here. Do not edit the API_URL line below.
+    const GEMINI_API_KEY = "PASTE_YOUR_GEMINI_API_KEY_HERE";
+    const GEMINI_KEY_STORAGE = "htw_gemini_api_key";
+    const GEMINI_MODEL = "gemini-1.5-flash";
+    const USE_GEMINI_AI = true;
+
+    function cleanGeminiApiKey(key) {
+      return (key || "")
+        .trim()
+        .replace(/^["']|["']$/g, "")
+        .replace(/\s+/g, "");
+    }
+
+    function getGeminiApiKey() {
+      const hardcodedKey = cleanGeminiApiKey(GEMINI_API_KEY);
+      if (hardcodedKey && hardcodedKey !== "PASTE_YOUR_GEMINI_API_KEY_HERE") {
+        return hardcodedKey;
+      }
+      return "";
+    }
+
+    function hasGeminiApiKey() {
+      const key = getGeminiApiKey();
+      return key && key !== "PASTE_YOUR_GEMINI_API_KEY_HERE";
+    }
+
+    function clearOldStoredGeminiKeyIfHardcoded() {
+      const hardcodedKey = cleanGeminiApiKey(GEMINI_API_KEY);
+      if (hardcodedKey && hardcodedKey !== "PASTE_YOUR_GEMINI_API_KEY_HERE") {
+        localStorage.removeItem(GEMINI_KEY_STORAGE);
+      }
+    }
+
+
+
+
+    const DEFAULT_CENTER = { lat: 50.8798, lng: 4.7005 };
+    const MAP_BOUNDS = {
+      minLat: 50.8713,
+      maxLat: 50.8883,
+      minLng: 4.6870,
+      maxLng: 4.7140
+    };
+
+    let activeFilter = "all";
+    let currentReportId = null;
+    let duplicateReportId = null;
+    let uploadedImageDataUrl = null;
+    let uploadedImageFile = null;
+    let uploadedObjectUrl = null;
+    let userLocation = null;
+
+    const USERS = {
+      citizen: { username: "citizen", password: "citizen123", role: "citizen", name: "Citizen User" },
+      admin: { username: "admin", password: "admin123", role: "admin", name: "Admin Officer" }
+    };
+
+    let currentUser = null;
+    let map = null;
+    let mapReady = false;
+    let reportLayers = [];
+    let userMarker = null;
+
+    const screens = document.querySelectorAll(".screen");
+
+    function login() {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      const user = Object.values(USERS).find(account =>
+        account.username === username && account.password === password
+      );
+
+      if (!user) {
+        document.getElementById("loginError").style.display = "block";
+        return;
+      }
+
+      currentUser = user;
+      sessionStorage.setItem("htw_current_user", JSON.stringify(user));
+      document.getElementById("loginError").style.display = "none";
+      applyRoleUI();
+
+      go(user.role === "admin" ? "admin" : "splash");
+    }
+
+    function quickLogin(role) {
+      const user = USERS[role];
+      document.getElementById("loginUsername").value = user.username;
+      document.getElementById("loginPassword").value = user.password;
+      login();
+    }
+
+    function restoreSession() {
+      const raw = sessionStorage.getItem("htw_current_user");
+      if (!raw) return false;
+
+      try {
+        currentUser = JSON.parse(raw);
+        applyRoleUI();
+        return true;
+      } catch {
+        sessionStorage.removeItem("htw_current_user");
+        return false;
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      sessionStorage.removeItem("htw_current_user");
+      go("login");
+    }
+
+    function requireRole(roles, fallback = "heatmap") {
+      if (!currentUser) {
+        go("login");
+        return false;
+      }
+
+      if (!roles.includes(currentUser.role)) {
+        go(fallback);
+        return false;
+      }
+
+      return true;
+    }
+
+    function applyRoleUI() {
+      if (!currentUser) return;
+
+      const badge = document.getElementById("splashRoleBadge");
+      if (badge) {
+        badge.textContent = `Logged in as ${currentUser.name} • ${currentUser.role}`;
+      }
+
+      const splashActions = document.getElementById("splashActions");
+      if (splashActions) {
+        splashActions.innerHTML = currentUser.role === "admin"
+          ? `
+            <button class="btn" onclick="go('admin')">🛠️ Open Admin Dashboard</button>
+            <button class="btn secondary" onclick="go('heatmap')">🗺️ View Real Map</button>
+          `
+          : `
+            <button class="btn" onclick="go('heatmap')">🗺️ Open Real Map</button>
+            <button class="btn secondary" onclick="go('report')">📸 Report Litter</button>
+          `;
+      }
+
+      renderMapActions();
+    }
+
+    function renderMapActions() {
+      const mapActions = document.getElementById("mapActions");
+      if (!mapActions || !currentUser) return;
+
+      if (currentUser.role === "admin") {
+        mapActions.innerHTML = `
+          <div class="btn-row">
+            <button class="btn" onclick="go('admin')">🛠️ Admin Dashboard</button>
+            <button class="btn secondary" onclick="go('reports')">📋 All Reports</button>
+          </div>
+        `;
+      } else {
+        mapActions.innerHTML = `
+          <div class="btn-row">
+            <button class="btn" onclick="go('report')">📸 Report Litter</button>
+            <button class="btn secondary" onclick="go('reports')">📋 Active Reports</button>
+          </div>
+        `;
+      }
+    }
+
+
+    function go(id) {
+      if (id !== "login" && !currentUser) id = "login";
+      if (id === "report" && !requireRole(["citizen"], "heatmap")) return;
+      if (id === "admin" && !requireRole(["admin"], "heatmap")) return;
+
+      screens.forEach(screen => screen.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      document.querySelector(".phone").scrollTop = 0;
+
+      if (id === "heatmap") {
+        renderStats();
+        renderMapActions();
+        setTimeout(() => {
+          initRealMap();
+          renderMap();
+        }, 70);
+      }
+
+      if (id === "reports") {
+        renderReportsPage();
+      }
+
+      if (id === "admin") {
+        renderAdminPage();
+      }
+
+      if (id === "report") {
+        }
+    }
+
+
+    function loadReports() {
+      const raw = localStorage.getItem(DB_KEY);
+      if (!raw) return [];
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+
+    function saveReports(reports) {
+      localStorage.setItem(DB_KEY, JSON.stringify(reports));
+      renderStats();
+      renderMap();
+    }
+
+    function reportType(report) {
+      if (report.status === "cleaned") return "cleaned";
+      if (report.riskLevel === "high") return "high";
+      return "medium";
+    }
+
+    function reportColor(report) {
+      const type = reportType(report);
+      if (type === "high") return "#dc123b";
+      if (type === "medium") return "#f5a623";
+      return "#2f8b5b";
+    }
+
+    function reportLabel(report) {
+      const type = reportType(report);
+      if (type === "high") return "High risk";
+      if (type === "medium") return "Medium risk";
+      return "Cleaned";
+    }
+
+    function shouldShowReport(report) {
+      if (activeFilter === "all") return true;
+      return reportType(report) === activeFilter;
+    }
+
+    function initRealMap() {
+      if (mapReady && map) {
+        map.invalidateSize(true);
+        return;
+      }
+
+      if (!window.L) {
+        document.getElementById("fallbackMap").classList.add("active");
+        renderFallbackMap();
+        return;
+      }
+
+      try {
+        map = L.map("map", {
+          zoomControl: false,
+          attributionControl: false
+        }).setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 14);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19
+        }).addTo(map);
+
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+
+        mapReady = true;
+        document.getElementById("fallbackMap").classList.remove("active");
+
+        map.on("moveend zoomend resize", renderRealHeatOverlay);
+
+        setTimeout(() => { map.invalidateSize(true); renderMap(); }, 100);
+        setTimeout(() => { map.invalidateSize(true); renderMap(); }, 400);
+        setTimeout(() => { map.invalidateSize(true); renderMap(); }, 900);
+      } catch (e) {
+        document.getElementById("fallbackMap").classList.add("active");
+        renderFallbackMap();
+      }
+    }
+
+
+    function isUnresolved(report) {
+      return report.status !== "cleaned";
+    }
+
+    function mapDisplayReports(reports) {
+      // The map should show the current state of each physical area.
+      // If a cleaned area gets reported again nearby, the new unresolved report wins visually.
+      // This prevents showing green + red circles on top of each other.
+      const sorted = [...reports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const selected = [];
+
+      for (const report of sorted) {
+        const overlapsExisting = selected.some(existing => {
+          const d = distanceMeters(
+            { lat: report.lat, lng: report.lng },
+            { lat: existing.lat, lng: existing.lng }
+          );
+
+          if (d > DUPLICATE_THRESHOLD_METERS) return false;
+
+          // If one of the overlapping reports is unresolved, show only the unresolved/current state.
+          if (isUnresolved(existing) || isUnresolved(report)) return true;
+
+          // Cleaned + cleaned at same area: show only the latest cleaned state.
+          return true;
+        });
+
+        if (!overlapsExisting) {
+          selected.push(report);
+        }
+      }
+
+      return selected;
+    }
+
+    function renderMap() {
+      if (!window.L || !mapReady || !map) {
+        renderFallbackMap();
+        return;
+      }
+
+      reportLayers.forEach(layer => map.removeLayer(layer));
+      reportLayers = [];
+
+      const reports = mapDisplayReports(loadReports()).filter(shouldShowReport);
+
+      reports.forEach(report => {
+        const color = reportColor(report);
+        const radius = reportType(report) === "high" ? 105 : reportType(report) === "medium" ? 76 : 64;
+
+        const circle = L.circle([report.lat, report.lng], {
+          radius,
+          color,
+          fillColor: color,
+          fillOpacity: report.status === "cleaned" ? 0.38 : 0.52,
+          weight: 2
+        }).addTo(map);
+
+        const marker = L.circleMarker([report.lat, report.lng], {
+          radius: 7,
+          color: "#ffffff",
+          fillColor: color,
+          fillOpacity: 1,
+          weight: 2
+        }).addTo(map);
+
+        const popup = `
+          <strong>${report.title}</strong><br/>
+          ${reportLabel(report)}<br/>
+          AI score: ${report.aiScore}/100<br/>
+          <button onclick="openReport('${report.id}')">Open report</button>
+        `;
+
+        circle.bindPopup(popup);
+        marker.bindPopup(popup);
+        marker.on("click", () => openReport(report.id));
+
+        reportLayers.push(circle, marker);
+      });
+
+      renderRealHeatOverlay();
+      renderFallbackMap();
+    }
+
+    function renderRealHeatOverlay() {
+      const layer = document.getElementById("realHeatLayer");
+      if (!layer) return;
+
+      const reports = mapDisplayReports(loadReports()).filter(shouldShowReport);
+
+      // If Leaflet is ready, project real lat/lng to screen pixels.
+      // If not, use percentage fallback based on Leuven bounds.
+      layer.innerHTML = reports.map(report => {
+        let left = "50%";
+        let top = "50%";
+
+        if (mapReady && map && window.L) {
+          const point = map.latLngToContainerPoint([report.lat, report.lng]);
+          left = `${point.x}px`;
+          top = `${point.y}px`;
+        } else {
+          const p = latLngToPercent(report.lat, report.lng);
+          left = `${p.x}%`;
+          top = `${p.y}%`;
+        }
+
+        const type = reportType(report);
+        const size = type === "high" ? 96 : type === "medium" ? 76 : 70;
+        const label = type === "high" ? "High" : type === "medium" ? "Med" : "Clean";
+
+        return `
+          <div
+            class="heat-blob ${type}"
+            onclick="openReport('${report.id}')"
+            title="${report.title}"
+            style="left:${left}; top:${top}; width:${size}px; height:${size}px;"
+          >${label}</div>
+        `;
+      }).join("");
+    }
+
+    function latLngToPercent(lat, lng) {
+      const xRaw = ((lng - MAP_BOUNDS.minLng) / (MAP_BOUNDS.maxLng - MAP_BOUNDS.minLng)) * 100;
+      const yRaw = (1 - ((lat - MAP_BOUNDS.minLat) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat))) * 100;
+      return {
+        x: Math.max(8, Math.min(92, xRaw)),
+        y: Math.max(15, Math.min(88, yRaw))
+      };
+    }
+
+    function renderFallbackMap() {
+      const layer = document.getElementById("fallbackHeatLayer");
+      if (!layer) return;
+
+      const reports = loadReports().filter(shouldShowReport);
+
+      layer.innerHTML = reports.map(report => {
+        const { x, y } = latLngToPercent(report.lat, report.lng);
+        const type = reportType(report);
+        const size = type === "high" ? 96 : type === "medium" ? 76 : 70;
+        const label = type === "high" ? "High" : type === "medium" ? "Med" : "Clean";
+
+        return `
+          <div
+            class="heat-blob ${type}"
+            onclick="openReport('${report.id}')"
+            title="${report.title}"
+            style="left:${x}%; top:${y}%; width:${size}px; height:${size}px;"
+          >${label}</div>
+        `;
+      }).join("");
+    }
+
+    function renderStats() {
+      const reports = mapDisplayReports(loadReports());
+      const high = reports.filter(r => reportType(r) === "high").length;
+      const medium = reports.filter(r => reportType(r) === "medium").length;
+      const cleaned = reports.filter(r => reportType(r) === "cleaned").length;
+
+      document.getElementById("highStat").textContent = high;
+      document.getElementById("mediumStat").textContent = medium;
+      document.getElementById("cleanStat").textContent = cleaned;
+    }
+
+    function setFilter(filter, button) {
+      activeFilter = filter;
+      document.querySelectorAll(".chip[data-filter]").forEach(chip => chip.classList.remove("active"));
+      button.classList.add("active");
+      renderMap();
+    }
+
+    function demoReports() {
+      const now = Date.now();
+      return [
+        {
+          id: "HTW-DEMO-1",
+          title: "Oude Markt Area",
+          lat: 50.87985,
+          lng: 4.70055,
+          status: "unsolved",
+          riskLevel: "high",
+          aiScore: 32,
+          wasteType: "Glass + Mixed Waste",
+          urgency: "High",
+          description: "Glass bottles and food packaging after a crowded evening.",
+          imageDataUrl: "",
+          createdAt: new Date(now - 1000 * 60 * 12).toISOString()
+        },
+        {
+          id: "HTW-DEMO-2",
+          title: "Station Area",
+          lat: 50.88192,
+          lng: 4.71562,
+          status: "unsolved",
+          riskLevel: "medium",
+          aiScore: 58,
+          wasteType: "Packaging Waste",
+          urgency: "Medium",
+          description: "Packaging and scattered paper close to pedestrian traffic.",
+          imageDataUrl: "",
+          createdAt: new Date(now - 1000 * 60 * 22).toISOString()
+        },
+        {
+          id: "HTW-DEMO-3",
+          title: "City Park",
+          lat: 50.87521,
+          lng: 4.69118,
+          status: "cleaned",
+          riskLevel: "clean",
+          aiScore: 82,
+          wasteType: "Low Waste",
+          urgency: "Low",
+          description: "Cleaned area after previous report.",
+          imageDataUrl: "",
+          createdAt: new Date(now - 1000 * 60 * 60).toISOString(),
+          cleanedAt: new Date(now - 1000 * 60 * 20).toISOString()
+        },
+        {
+          id: "HTW-DEMO-4",
+          title: "Bondgenotenlaan",
+          lat: 50.87918,
+          lng: 4.70592,
+          status: "unsolved",
+          riskLevel: "high",
+          aiScore: 27,
+          wasteType: "Plastic + Mixed Waste",
+          urgency: "High",
+          description: "Overflowing street litter around a busy pedestrian route.",
+          imageDataUrl: "",
+          createdAt: new Date(now - 1000 * 60 * 6).toISOString()
+        },
+        {
+          id: "HTW-DEMO-5",
+          title: "Sint-Donatus Park Edge",
+          lat: 50.87586,
+          lng: 4.70420,
+          status: "unsolved",
+          riskLevel: "medium",
+          aiScore: 61,
+          wasteType: "Food Waste + Packaging",
+          urgency: "Medium",
+          description: "Food packaging near benches and footpath.",
+          imageDataUrl: "",
+          createdAt: new Date(now - 1000 * 60 * 35).toISOString()
+        }
+      ];
+    }
+
+    function ensureInitialDemoData() {
+      if (loadReports().length === 0) {
+        saveReports(demoReports());
+      }
+    }
+
+    function resetDemoData() {
+      saveReports(demoReports());
+      renderReportsPage();
+      if (mapReady && map) {
+        map.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 14);
+      }
+    }
+
+    function centerMapOnUser() {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by this browser.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          if (mapReady && map) {
+            map.setView([lat, lng], 17);
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker([lat, lng]).addTo(map).bindPopup("Your location").openPopup();
+          } else {
+            userLocation = { lat, lng };
+            alert("Location captured. It will be used when you create a report.");
+          }
+        },
+        () => alert("Location permission denied or unavailable.")
+      );
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const imageStatus = document.getElementById("imageStatus");
+      const preview = document.getElementById("uploadedPreview");
+      const placeholder = document.getElementById("uploadPlaceholder");
+      const uploadBox = document.getElementById("uploadBox");
+
+      if (!file.type.startsWith("image/")) {
+        alert("Please upload an image file.");
+        return;
+      }
+
+      // IMPORTANT FIX:
+      // Do NOT convert the full image to base64 during upload.
+      // Large phone photos can freeze the browser if FileReader/canvas runs immediately.
+      // We only create a lightweight object URL for preview, then compress later when Scan is pressed.
+      uploadedImageFile = file;
+      uploadedImageDataUrl = null;
+
+      if (uploadedObjectUrl) {
+        URL.revokeObjectURL(uploadedObjectUrl);
+      }
+
+      uploadedObjectUrl = URL.createObjectURL(file);
+      preview.src = uploadedObjectUrl;
+      preview.style.display = "block";
+      placeholder.style.display = "none";
+      uploadBox.classList.add("has-image");
+
+      const sizeText = file.size < 1024 * 1024
+        ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      imageStatus.textContent =
+        `Selected: ${file.name} • ${sizeText} • will compress during AI scan`;
+    }
+
+    async function prepareImageForAi() {
+      if (uploadedImageDataUrl) return uploadedImageDataUrl;
+      if (!uploadedImageFile) return null;
+
+      const scanButton = document.getElementById("scanButton");
+      scanButton.innerHTML = '<span class="loading-dots">Preparing image</span>';
+
+      uploadedImageDataUrl = await compressImageFile(uploadedImageFile, {
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 0.58
+      });
+
+      return uploadedImageDataUrl;
+    }
+
+    function compressImageFile(file, options = {}) {
+      const maxWidth = options.maxWidth || 512;
+      const maxHeight = options.maxHeight || 512;
+      const quality = options.quality || 0.58;
+
+      return new Promise((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+
+        image.onload = () => {
+          // Give the UI one frame to breathe before canvas work.
+          requestAnimationFrame(() => {
+            try {
+              let { width, height } = image;
+
+              const scale = Math.min(1, maxWidth / width, maxHeight / height);
+              width = Math.max(1, Math.round(width * scale));
+              height = Math.max(1, Math.round(height * scale));
+
+              const canvas = document.createElement("canvas");
+              canvas.width = width;
+              canvas.height = height;
+
+              const ctx = canvas.getContext("2d", { alpha: false });
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(image, 0, 0, width, height);
+
+              URL.revokeObjectURL(objectUrl);
+
+              resolve(canvas.toDataURL("image/jpeg", quality));
+            } catch (err) {
+              URL.revokeObjectURL(objectUrl);
+              reject(err);
+            }
+          });
+        };
+
+        image.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error("Could not load image. Try JPG/PNG instead of HEIC."));
+        };
+
+        image.src = objectUrl;
+      });
+    }
+
+    function getUserLocation() {
+      const locationStatus = document.getElementById("locationStatus");
+      const locationText = document.getElementById("locationText");
+
+      if (!navigator.geolocation) {
+        locationStatus.textContent = "Geolocation is not supported by this browser. Using demo Leuven coordinates.";
+        setDemoLocation();
+        return;
+      }
+
+      locationStatus.innerHTML = '<span class="loading-dots">Getting your location</span>';
+
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          userLocation = { lat, lng };
+          locationText.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          locationStatus.textContent = "Location attached successfully.";
+        },
+        () => {
+          locationStatus.textContent = "Location permission denied or unavailable. Using demo Leuven coordinates.";
+          setDemoLocation();
+        },
+        { enableHighAccuracy: true, timeout: 9000, maximumAge: 0 }
+      );
+    }
+
+    function setDemoLocation() {
+      const lat = DEFAULT_CENTER.lat + (Math.random() - 0.5) * 0.006;
+      const lng = DEFAULT_CENTER.lng + (Math.random() - 0.5) * 0.006;
+      userLocation = { lat, lng };
+      document.getElementById("locationText").value = `${lat.toFixed(6)}, ${lng.toFixed(6)} — demo`;
+    }
+
+    function distanceMeters(a, b) {
+      const R = 6371000;
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+
+      const x =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+      return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    }
+
+    function findNearbyUnsolvedReport(location) {
+      const reports = loadReports();
+      let closest = null;
+
+      for (const report of reports) {
+        if (report.status === "cleaned") continue;
+        const distance = distanceMeters(location, { lat: report.lat, lng: report.lng });
+
+        if (distance <= DUPLICATE_THRESHOLD_METERS) {
+          if (!closest || distance < closest.distance) {
+            closest = { ...report, distance };
+          }
+        }
+      }
+
+      return closest;
+    }
+
+    async function scanAndAddToHeatmap() {
+      const scanButton = document.getElementById("scanButton");
+
+      if (!uploadedImageFile && !uploadedImageDataUrl) {
+        alert("Please upload an image first.");
+        return;
+      }
+
+      if (!userLocation) {
+        alert("Please attach your location first.");
+        return;
+      }
+
+      const duplicate = findNearbyUnsolvedReport(userLocation);
+      if (duplicate) {
+        showDuplicateModal(duplicate);
+        return;
+      }
+
+      scanButton.disabled = true;
+
+      let imageForAi = uploadedImageDataUrl || "";
+      try {
+        scanButton.innerHTML = '<span class="loading-dots">Preparing image</span>';
+        imageForAi = await prepareImageForAi();
+      } catch (error) {
+        window.lastAiError = `Image preparation failed: ${error?.message || String(error)}`;
+      }
+
+      const analysisPayload = {
+        image: imageForAi,
+        imageDataUrl: imageForAi,
+        location: userLocation,
+        description: document.getElementById("reportDescription").value
+      };
+
+      let aiResult;
+
+      try {
+        scanButton.innerHTML = '<span class="loading-dots">Analyzing image</span>';
+        aiResult = await analyzeWithGemini(analysisPayload);
+        window.lastAiError = "";
+      } catch (error) {
+        window.lastAiError = error?.message || String(error);
+        scanButton.innerHTML = '<span class="loading-dots">Completing report</span>';
+        aiResult = await localAiScoring(analysisPayload);
+      }
+
+      if (!aiResult) {
+        aiResult = {
+          cleanlinessScore: 55,
+          riskLevel: "Medium",
+          wasteType: "Mixed Waste",
+          urgency: "Medium",
+          area: "Current GPS location"
+        };
+      }
+
+      const newReport = {
+        id: `HTW-${Date.now()}`,
+        title: reverseNameFromLocation(userLocation),
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        status: "unsolved",
+        riskLevel: aiResult.riskLevel.toLowerCase(),
+        aiScore: aiResult.cleanlinessScore,
+        wasteType: aiResult.wasteType,
+        urgency: aiResult.urgency,
+        description: document.getElementById("reportDescription").value,
+        imageDataUrl: imageForAi,
+        createdAt: new Date().toISOString()
+      };
+
+      const reports = loadReports();
+      reports.unshift(newReport);
+      saveReports(reports);
+      currentReportId = newReport.id;
+
+      updateAiScreen(aiResult, newReport);
+
+      scanButton.disabled = false;
+      scanButton.textContent = "Scan & Add to Heatmap";
+      resetReportForm(false);
+
+      go("scan");
+    }
+
+    async function simulateAiScoring(payload) {
+      try {
+        return await analyzeWithGemini(payload);
+      } catch {
+        return localAiScoring(payload);
+      }
+    }
+
+    function promiseTimeout(promise, timeoutMs, timeoutMessage = "Operation timed out") {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+        })
+      ]);
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        return await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function analyzeWithGemini(payload) {
+      const apiKey = getGeminiApiKey();
+
+      if (!apiKey) {
+        throw new Error("Missing Gemini API key");
+      }
+
+      const API_URL =
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      const prompt = `Analyze the attached waste/litter image.
+
+Return ONLY valid JSON. No markdown. No explanation.
+
+Schema:
+{
+  "cleanlinessScore": <number 0-100>,
+  "riskLevel": "<High|Medium|Clean>",
+  "wasteType": "<specific waste type>",
+  "urgency": "<High|Medium|Low>",
+  "area": "<location if identifiable or 'Unknown'>"
+}
+
+Rules:
+- 0-39 = High
+- 40-69 = Medium
+- 70-100 = Clean
+- If visible litter exists, score should usually be below 70.
+- If image is unclear, use the description/context.
+
+Description/context: "${payload.description || "No description provided"}"`;
+
+      const parts = [{ text: prompt }];
+
+      const imageDataUrl = payload.image || payload.imageDataUrl;
+      if (imageDataUrl) {
+        const [header, base64Data] = imageDataUrl.split(",");
+        const mimeType = header.split(";")[0].split(":")[1] || "image/jpeg";
+
+        parts.push({
+          inline_data: {
+            mime_type: mimeType,
+            data: base64Data
+          }
+        });
+      }
+
+      const response = await fetchWithTimeout(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 256,
+            response_mime_type: "application/json"
+          }
+        })
+      }, GEMINI_TIMEOUT_MS);
+
+      if (!response.ok) {
+        let message = await response.text();
+
+        try {
+          const parsed = JSON.parse(message);
+          message = parsed?.error?.message || message;
+        } catch {}
+
+        const error = new Error(`Gemini HTTP ${response.status}: ${message}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!text) {
+        throw new Error("Gemini returned empty response");
+      }
+
+      const cleanedText = text
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```$/i, "")
+        .trim();
+
+      const result = JSON.parse(cleanedText);
+      const score = Number(result.cleanlinessScore);
+      const normalizedScore = Number.isFinite(score)
+        ? Math.max(0, Math.min(100, Math.round(score)))
+        : 50;
+
+      const normalizedRisk =
+        normalizedScore < 40 ? "High" : normalizedScore < 70 ? "Medium" : "Clean";
+
+      return {
+        cleanlinessScore: normalizedScore,
+        riskLevel: ["High", "Medium", "Clean"].includes(result.riskLevel) ? result.riskLevel : normalizedRisk,
+        wasteType: result.wasteType || "Mixed Waste",
+        urgency: ["High", "Medium", "Low"].includes(result.urgency)
+          ? result.urgency
+          : normalizedRisk === "High" ? "High" : normalizedRisk === "Medium" ? "Medium" : "Low",
+        area: result.area || "Current GPS location"
+      };
+    }
+
+    function localAiScoring(payload) {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          const description = (payload.description || "").toLowerCase();
+          let score = 66;
+
+          if (description.includes("glass")) score -= 14;
+          if (description.includes("food")) score -= 10;
+          if (description.includes("bottle")) score -= 12;
+          if (description.includes("illegal")) score -= 20;
+          if (description.includes("overflow")) score -= 16;
+          if (description.includes("plastic")) score -= 8;
+          if (payload.image || payload.imageDataUrl) score -= 6;
+
+          score += Math.floor(Math.random() * 11) - 5;
+          score = Math.max(18, Math.min(88, score));
+
+          const riskLevel = score < 40 ? "High" : score < 70 ? "Medium" : "Clean";
+          const wasteType = description.includes("glass")
+            ? "Glass + Mixed Waste"
+            : description.includes("food")
+              ? "Food Waste + Packaging"
+              : description.includes("plastic")
+                ? "Plastic + Mixed Waste"
+                : "Mixed Waste";
+
+          resolve({
+            cleanlinessScore: score,
+            riskLevel,
+            wasteType,
+            urgency: riskLevel === "High" ? "High" : riskLevel === "Medium" ? "Medium" : "Low",
+            area: "Current GPS location"
+          });
+        }, 200);
+      });
+    }
+
+    function reverseNameFromLocation(location) {
+      const dOude = distanceMeters(location, DEFAULT_CENTER);
+      if (dOude < 250) return "Oude Markt Area";
+      return `Report near ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`;
+    }
+
+    function updateAiScreen(aiResult, report) {
+      const aiImagePreview = document.getElementById("aiImagePreview");
+      const aiScoreText = document.getElementById("aiScoreText");
+      const aiScoreRing = document.getElementById("aiScoreRing");
+      const aiWasteType = document.getElementById("aiWasteType");
+      const aiUrgency = document.getElementById("aiUrgency");
+      const aiArea = document.getElementById("aiArea");
+      const aiZoneStatus = document.getElementById("aiZoneStatus");
+      const aiRiskDot = document.getElementById("aiRiskDot");
+      const aiExplanation = document.getElementById("aiExplanation");
+
+      aiImagePreview.style.backgroundImage =
+        `linear-gradient(120deg, rgba(0,0,0,0.32), rgba(0,0,0,0.04)), url("${report.imageDataUrl}")`;
+
+      aiScoreText.textContent = aiResult.cleanlinessScore;
+      aiScoreRing.dataset.score = `${aiResult.cleanlinessScore}%`;
+
+      const color = aiResult.riskLevel === "High" ? "var(--red)" : aiResult.riskLevel === "Medium" ? "var(--yellow)" : "var(--green-2)";
+      aiScoreRing.style.background =
+        `conic-gradient(${color} 0 ${aiResult.cleanlinessScore}%, #edf1ee ${aiResult.cleanlinessScore}% 100%)`;
+      aiRiskDot.style.background = color;
+
+      aiWasteType.textContent = aiResult.wasteType;
+      aiUrgency.textContent = aiResult.urgency;
+      aiArea.textContent = report.title;
+      aiZoneStatus.textContent = `${aiResult.riskLevel} Risk`;
+      aiExplanation.textContent = `Report ${report.id} was added to the database and rendered on the real map.`;
+    }
+
+    function resetReportForm(clearLocation = true) {
+      uploadedImageDataUrl = null;
+      uploadedImageFile = null;
+      if (uploadedObjectUrl) {
+        URL.revokeObjectURL(uploadedObjectUrl);
+        uploadedObjectUrl = null;
+      }
+      document.getElementById("imageInput").value = "";
+      document.getElementById("uploadedPreview").src = "";
+      document.getElementById("uploadedPreview").style.display = "none";
+      document.getElementById("uploadPlaceholder").style.display = "block";
+      document.getElementById("uploadBox").classList.remove("has-image");
+      document.getElementById("imageStatus").textContent = "No image selected yet.";
+
+      if (clearLocation) {
+        userLocation = null;
+        document.getElementById("locationText").value = "Location not selected yet";
+        document.getElementById("locationStatus").textContent = "Press “Use GPS” to attach your current latitude and longitude.";
+      }
+    }
+
+    function showDuplicateModal(report) {
+      duplicateReportId = report.id;
+      document.getElementById("duplicateReportTitle").textContent = report.title;
+      document.getElementById("duplicateReportMeta").textContent =
+        `Distance: ${Math.round(report.distance)} m • Status: ${report.status}`;
+      document.getElementById("duplicateModal").classList.add("active");
+    }
+
+    function closeDuplicateModalOnly() {
+      document.getElementById("duplicateModal").classList.remove("active");
+    }
+
+    function closeDuplicateModal() {
+      closeDuplicateModalOnly();
+      go("heatmap");
+    }
+
+    function viewDuplicateReport() {
+      closeDuplicateModalOnly();
+      openReport(duplicateReportId);
+    }
+
+
+    function renderAdminPage() {
+      const reports = loadReports();
+      const active = reports.filter(r => r.status !== "cleaned");
+
+      const count = document.getElementById("adminReportCount");
+      const list = document.getElementById("adminReportsList");
+      if (!count || !list) return;
+
+      count.textContent = `${active.length} active`;
+
+      list.innerHTML = active.length
+        ? active.map(adminReportCardHTML).join("")
+        : emptyState("No active reports to assign.");
+    }
+
+    function adminReportCardHTML(report) {
+      const color = reportColor(report);
+      const team = report.assignedTeam || "Unassigned";
+
+      return `
+        <div class="activity-item" style="grid-template-columns:50px 1fr;">
+          <div class="square" style="background:${softColor(report)};color:${color};">${report.riskLevel === "high" ? "!" : "•"}</div>
+          <div>
+            <h3>${report.title}</h3>
+            <p class="small">${reportLabel(report)} • AI score ${report.aiScore}/100</p>
+            <p class="small">Assigned team: <strong>${team}</strong></p>
+
+            <select class="admin-select" onchange="assignReportTeam('${report.id}', this.value)">
+              <option value="">Assign team...</option>
+              <option value="Team Alpha" ${team === "Team Alpha" ? "selected" : ""}>Team Alpha — city center</option>
+              <option value="Team Bravo" ${team === "Team Bravo" ? "selected" : ""}>Team Bravo — parks</option>
+              <option value="Team Charlie" ${team === "Team Charlie" ? "selected" : ""}>Team Charlie — station area</option>
+            </select>
+
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn secondary" onclick="openReport('${report.id}')">Open</button>
+              <button class="btn" onclick="markReportCleaned('${report.id}')">Mark Cleaned</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function assignReportTeam(reportId, teamName) {
+      if (!teamName) return;
+
+      const reports = loadReports();
+      const report = reports.find(r => r.id === reportId);
+      if (!report) return;
+
+      report.assignedTeam = teamName;
+      report.assignedAt = new Date().toISOString();
+      saveReports(reports);
+      renderAdminPage();
+    }
+
+    function renderReportsPage() {
+      const reports = loadReports();
+      const active = reports.filter(r => r.status !== "cleaned");
+      const cleaned = reports.filter(r => r.status === "cleaned");
+
+      document.getElementById("activeReportCount").textContent = `${active.length} active`;
+
+      document.getElementById("activeReportsList").innerHTML = active.length
+        ? active.map(reportCardHTML).join("")
+        : emptyState("No active reports yet. Add a new litter report from the map screen.");
+
+      document.getElementById("cleanedReportsList").innerHTML = cleaned.length
+        ? cleaned.map(reportCardHTML).join("")
+        : emptyState("No cleaned reports yet.");
+    }
+
+    function emptyState(text) {
+      return `<div class="card"><p>${text}</p></div>`;
+    }
+
+    function reportCardHTML(report) {
+      const color = reportColor(report);
+      const label = reportLabel(report);
+      const icon = report.status === "cleaned" ? "✓" : report.riskLevel === "high" ? "!" : "•";
+
+      return `
+        <div class="activity-item clickable" onclick="openReport('${report.id}')">
+          <div class="square" style="background:${softColor(report)};color:${color};">${icon}</div>
+          <div>
+            <h3>${report.title}</h3>
+            <p class="small">${label} • AI score ${report.aiScore}/100</p>
+            <p class="small">${new Date(report.createdAt).toLocaleString()}</p>
+          </div>
+          <span>›</span>
+        </div>
+      `;
+    }
+
+    function softColor(report) {
+      if (report.status === "cleaned") return "var(--green-soft)";
+      if (report.riskLevel === "high") return "var(--red-soft)";
+      if (report.riskLevel === "medium") return "var(--yellow-soft)";
+      return "var(--green-soft)";
+    }
+
+    function openReport(id) {
+      currentReportId = id;
+      const report = loadReports().find(r => r.id === id);
+      if (!report) return;
+
+      renderTracking(report);
+      go("tracking");
+    }
+
+    function renderTracking(report) {
+      const color = reportColor(report);
+      const cleaned = report.status === "cleaned";
+      const imageStyle = report.imageDataUrl
+        ? `background-image:url('${report.imageDataUrl}')`
+        : `background:linear-gradient(135deg,#d9eee1,#ffffff);`;
+
+      document.getElementById("trackingContent").innerHTML = `
+        <div class="card">
+          <p class="small">${report.id}</p>
+          <h2>${report.title}</h2>
+          <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+            <span class="pill" style="background:${softColor(report)};color:${color};border:none;">${reportLabel(report)}</span>
+            <p class="small">AI score ${report.aiScore}/100</p>
+          </div>
+          <p class="small" style="margin-top:10px;">${report.lat.toFixed(6)}, ${report.lng.toFixed(6)}</p>
+          <p class="small" style="margin-top:6px;">Assigned team: <strong>${report.assignedTeam || "Unassigned"}</strong></p>
+        </div>
+
+        <div class="section-title"><h3>Evidence</h3></div>
+        <div class="photo" data-label="Image" style="height:190px;${imageStyle}"></div>
+
+        <div class="section-title"><h3>Description</h3></div>
+        <div class="card"><p>${report.description || "No description"}</p></div>
+
+        <div class="section-title"><h3>Cleaning Progress</h3></div>
+        <div class="card">
+          <div class="timeline">
+            <div class="step"><div class="step-dot">✓</div><div><h3>Submitted</h3><p class="small">${new Date(report.createdAt).toLocaleString()}</p></div></div>
+            <div class="step"><div class="step-dot">✓</div><div><h3>Added to Real Map</h3><p class="small">The report is visible as a colored map zone</p></div></div>
+            <div class="step"><div class="step-dot">${cleaned ? "✓" : "…"}</div><div><h3>${cleaned ? "Cleaned" : "Unsolved"}</h3><p class="small">${cleaned ? "Area turned green" : "Waiting for cleaning team"}</p></div></div>
+          </div>
+        </div>
+
+        <button class="btn" style="margin-top:22px;" onclick="focusReportOnMap('${report.id}')">Show on Map</button>
+        ${
+          cleaned
+            ? `<button class="btn secondary" style="margin-top:12px;" onclick="go('reports')">Back to Reports</button>`
+            : `<button class="btn" style="margin-top:12px;" onclick="markReportCleaned('${report.id}')">Mark as Cleaned</button>`
+        }
+      `;
+    }
+
+    function focusReportOnMap(id) {
+      const report = loadReports().find(r => r.id === id);
+      if (!report) return;
+      go("heatmap");
+
+      setTimeout(() => {
+        if (mapReady && map) {
+          map.setView([report.lat, report.lng], 17);
+        }
+      }, 130);
+    }
+
+    function markReportCleaned(id) {
+      const reports = loadReports();
+      const report = reports.find(r => r.id === id);
+      if (!report) return;
+
+      report.status = "cleaned";
+      report.cleanedAt = new Date().toISOString();
+      saveReports(reports);
+
+      const feedbackBefore = document.getElementById("feedbackBefore");
+      if (feedbackBefore && report.imageDataUrl) {
+        feedbackBefore.style.backgroundImage = `url('${report.imageDataUrl}')`;
+      }
+
+      renderTracking(report);
+      go("feedback");
+    }
+
+    window.addEventListener("load", () => {
+      clearOldStoredGeminiKeyIfHardcoded();
+      ensureInitialDemoData();
+      renderStats();
+      renderFallbackMap();
+
+      if (restoreSession()) {
+        go(currentUser.role === "admin" ? "admin" : "splash");
+      } else {
+        go("login");
+      }
+
+      setTimeout(() => {
+        if (!window.L) {
+          document.getElementById("fallbackMap").classList.add("active");
+        }
+      }, 1800);
+    });
+
+    window.addEventListener("unhandledrejection", () => {
+      const scanButton = document.getElementById("scanButton");
+      if (scanButton && scanButton.disabled) {
+        scanButton.disabled = false;
+        scanButton.textContent = "Scan & Add to Heatmap";
+      }
+    });
+
+    window.showLastAiError = function () {
+      return window.lastAiError || "No AI error captured yet.";
+    };
+  </script>
+</body>
+</html>
